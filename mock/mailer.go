@@ -5,6 +5,8 @@
 package mock
 
 import (
+	tls "crypto/tls"
+	io "io"
 	smtp "net/smtp"
 	reflect "reflect"
 
@@ -63,4 +65,155 @@ func (m *Mockauth) Start(server *smtp.ServerInfo) (string, []byte, error) {
 func (mr *MockauthMockRecorder) Start(server interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*Mockauth)(nil).Start), server)
+}
+
+// MocksmtpClient is a mock of smtpClient interface.
+type MocksmtpClient struct {
+	ctrl     *gomock.Controller
+	recorder *MocksmtpClientMockRecorder
+}
+
+// MocksmtpClientMockRecorder is the mock recorder for MocksmtpClient.
+type MocksmtpClientMockRecorder struct {
+	mock *MocksmtpClient
+}
+
+// NewMocksmtpClient creates a new mock instance.
+func NewMocksmtpClient(ctrl *gomock.Controller) *MocksmtpClient {
+	mock := &MocksmtpClient{ctrl: ctrl}
+	mock.recorder = &MocksmtpClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocksmtpClient) EXPECT() *MocksmtpClientMockRecorder {
+	return m.recorder
+}
+
+// Auth mocks base method.
+func (m *MocksmtpClient) Auth(arg0 smtp.Auth) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Auth", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Auth indicates an expected call of Auth.
+func (mr *MocksmtpClientMockRecorder) Auth(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Auth", reflect.TypeOf((*MocksmtpClient)(nil).Auth), arg0)
+}
+
+// Close mocks base method.
+func (m *MocksmtpClient) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MocksmtpClientMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MocksmtpClient)(nil).Close))
+}
+
+// Data mocks base method.
+func (m *MocksmtpClient) Data() (io.WriteCloser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Data")
+	ret0, _ := ret[0].(io.WriteCloser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Data indicates an expected call of Data.
+func (mr *MocksmtpClientMockRecorder) Data() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Data", reflect.TypeOf((*MocksmtpClient)(nil).Data))
+}
+
+// Extension mocks base method.
+func (m *MocksmtpClient) Extension(arg0 string) (bool, string) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Extension", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(string)
+	return ret0, ret1
+}
+
+// Extension indicates an expected call of Extension.
+func (mr *MocksmtpClientMockRecorder) Extension(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Extension", reflect.TypeOf((*MocksmtpClient)(nil).Extension), arg0)
+}
+
+// Hello mocks base method.
+func (m *MocksmtpClient) Hello(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Hello", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Hello indicates an expected call of Hello.
+func (mr *MocksmtpClientMockRecorder) Hello(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Hello", reflect.TypeOf((*MocksmtpClient)(nil).Hello), arg0)
+}
+
+// Mail mocks base method.
+func (m *MocksmtpClient) Mail(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Mail", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Mail indicates an expected call of Mail.
+func (mr *MocksmtpClientMockRecorder) Mail(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Mail", reflect.TypeOf((*MocksmtpClient)(nil).Mail), arg0)
+}
+
+// Quit mocks base method.
+func (m *MocksmtpClient) Quit() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Quit")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Quit indicates an expected call of Quit.
+func (mr *MocksmtpClientMockRecorder) Quit() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Quit", reflect.TypeOf((*MocksmtpClient)(nil).Quit))
+}
+
+// Rcpt mocks base method.
+func (m *MocksmtpClient) Rcpt(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Rcpt", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Rcpt indicates an expected call of Rcpt.
+func (mr *MocksmtpClientMockRecorder) Rcpt(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rcpt", reflect.TypeOf((*MocksmtpClient)(nil).Rcpt), arg0)
+}
+
+// StartTLS mocks base method.
+func (m *MocksmtpClient) StartTLS(arg0 *tls.Config) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartTLS", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartTLS indicates an expected call of StartTLS.
+func (mr *MocksmtpClientMockRecorder) StartTLS(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartTLS", reflect.TypeOf((*MocksmtpClient)(nil).StartTLS), arg0)
 }
