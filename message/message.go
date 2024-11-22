@@ -1,12 +1,10 @@
-package gomailer
+package message
 
 import (
 	"crypto/tls"
-	"encoding/base64"
 	"fmt"
 	"net/mail"
 	"net/smtp"
-	"strings"
 )
 
 const (
@@ -22,8 +20,8 @@ const (
 	separator = ", "
 )
 
-// Email will be sent in email.
-type Email struct {
+// Message will be sent in email.
+type Message struct {
 	// From whom is going to send that mail.
 	From string
 	// Recipients contains the primary recipients of the email.
@@ -42,48 +40,54 @@ type Email struct {
 	Headers mail.Header
 }
 
-func NewEmail() Email {
-	return Email{}
+func NewMessage() Message {
+	return Message{}
 }
 
-// validate validates email primary fields before send operation.
-func (e Email) validate() error {
-	if e.From == "" {
+// validate validates message primary fields before send operation.
+func (m Message) validate() error {
+	if m.From == "" {
 		return fmt.Errorf("from address cannot be empty")
 	}
-	if _, err := mail.ParseAddress(e.From); err != nil {
+	if _, err := mail.ParseAddress(m.From); err != nil {
 		return fmt.Errorf("invalid from address: %w", err)
 	}
-	if len(e.Recipients) == 0 {
+	if len(m.Recipients) == 0 {
 		return fmt.Errorf("to cannot be empty")
 	}
 
-	for _, r := range e.Recipients {
+	for _, r := range m.Recipients {
 		if _, err := mail.ParseAddress(r); err != nil {
 			return fmt.Errorf("invalid recipient email: %w", err)
 		}
 	}
 	return nil
 }
+func (m Message) Encode() ([]byte, error) {
+	if err := m.validate(); err != nil {
+		return nil, fmt.Errorf("failed to encode message: %w", err)
+	}
+	return encode(m), nil
+}
 
 // Send sends email using smtp.Auth.
-func (e Email) Send(addr string, a smtp.Auth) error {
+func Send(m Message, addr string, a smtp.Auth) error {
 	if a == nil {
 		return fmt.Errorf("smtp.auth cannot be nil")
 	}
 	// validating email.
-	err := e.validate()
+	err := m.validate()
 	if err != nil {
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
-	return smtp.SendMail(addr, a, e.From, e.Recipients, encodeEmail(e))
+	return smtp.SendMail(addr, a, m.From, m.Recipients, encode(m))
 }
 
 // SendWithTLS sends email over a tls with an optional tls.Config
 // TLS helps establish a secure and trusted connection between the client and server,
 // which is essential for applications that handle sensitive data, such as online banking, email, and e-commerce.
-func (e Email) SendWithTLS(addr string, a smtp.Auth, tlsCfg *tls.Config) error {
+func SendWithTLS(e Message, addr string, a smtp.Auth, tlsCfg *tls.Config) error {
 	if a == nil {
 		return fmt.Errorf("smtp.auth cannot be nil")
 	}
@@ -120,67 +124,9 @@ func (e Email) SendWithTLS(addr string, a smtp.Auth, tlsCfg *tls.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to get data writer from smtp client: %w", err)
 	}
-	_, _ = w.Write(encodeEmail(e))
+	_, _ = w.Write(encode(e))
 	defer func() {
 		_ = w.Close()
 	}()
 	return client.Quit()
-}
-
-// encodeBase64 Helper function to encode a string in Base64.
-func encodeBase64(input string) string {
-	return strings.TrimRight(base64.StdEncoding.EncodeToString([]byte(input)), "=")
-}
-
-// splitLines splits the input string into lines of a specified maximum length.
-func splitLines(input string, maxLength int) []string {
-	var lines []string
-	for len(input) > maxLength {
-		lines = append(lines, input[:maxLength])
-		input = input[maxLength:]
-	}
-	lines = append(lines, input)
-	return lines
-}
-
-// encodeEmail encodes mail components into bytes to be sent.
-func encodeEmail(e Email) []byte {
-	mailSubjectEncoded := "=?UTF-8?B?" + encodeBase64(e.Subject) + "?="
-	headers := make(map[string]string)
-	headers["MIME-Version"] = "1.0"
-	if e.HTMLBody != "" {
-		headers["Content-Type"] = htmlTypeContentType
-	} else {
-		headers["Content-Type"] = defaultContentType
-	}
-	headers["Subject"] = mailSubjectEncoded
-	headers["From"] = e.From
-
-	if len(e.Recipients) > 0 {
-		headers["To"] = strings.Join(e.Recipients, separator)
-	}
-	if len(e.Cc) > 0 {
-		headers["Cc"] = strings.Join(e.Cc, separator)
-	}
-
-	if len(e.Bcc) > 0 {
-		headers["Bcc"] = strings.Join(e.Bcc, separator)
-	}
-
-	for k, v := range e.Headers {
-		headers[k] = v[0]
-	}
-	var mailMessage strings.Builder
-	for k, v := range headers {
-		mailMessage.WriteString(fmt.Sprintf("%s: %s%s", k, v, crlf))
-	}
-	mailMessage.WriteString(crlf)
-	if e.HTMLBody != "" {
-		mailMessage.WriteString(e.HTMLBody)
-	} else {
-		for _, line := range splitLines(e.Body, maxLineLength) {
-			mailMessage.WriteString(line + crlf)
-		}
-	}
-	return []byte(mailMessage.String())
 }
