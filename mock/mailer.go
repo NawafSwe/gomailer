@@ -96,7 +96,7 @@ func (m *MocksmtpClient) EXPECT() *MocksmtpClientMockRecorder {
 // Auth mocks base method.
 func (m *MocksmtpClient) Auth(arg0 smtp.Auth) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "auth", arg0)
+	ret := m.ctrl.Call(m, "Auth", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
@@ -104,7 +104,7 @@ func (m *MocksmtpClient) Auth(arg0 smtp.Auth) error {
 // Auth indicates an expected call of Auth.
 func (mr *MocksmtpClientMockRecorder) Auth(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "auth", reflect.TypeOf((*MocksmtpClient)(nil).Auth), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Auth", reflect.TypeOf((*MocksmtpClient)(nil).Auth), arg0)
 }
 
 // Close mocks base method.
@@ -407,4 +407,56 @@ func (m *Mockconn) Write(b []byte) (int, error) {
 func (mr *MockconnMockRecorder) Write(b interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*Mockconn)(nil).Write), b)
+}
+
+// MockwriteCloser is a mock of writeCloser interface.
+type MockwriteCloser struct {
+	ctrl     *gomock.Controller
+	recorder *MockwriteCloserMockRecorder
+}
+
+// MockwriteCloserMockRecorder is the mock recorder for MockwriteCloser.
+type MockwriteCloserMockRecorder struct {
+	mock *MockwriteCloser
+}
+
+// NewMockwriteCloser creates a new mock instance.
+func NewMockwriteCloser(ctrl *gomock.Controller) *MockwriteCloser {
+	mock := &MockwriteCloser{ctrl: ctrl}
+	mock.recorder = &MockwriteCloserMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwriteCloser) EXPECT() *MockwriteCloserMockRecorder {
+	return m.recorder
+}
+
+// Close mocks base method.
+func (m *MockwriteCloser) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockwriteCloserMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockwriteCloser)(nil).Close))
+}
+
+// Write mocks base method.
+func (m *MockwriteCloser) Write(arg0 []byte) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Write", arg0)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Write indicates an expected call of Write.
+func (mr *MockwriteCloserMockRecorder) Write(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockwriteCloser)(nil).Write), arg0)
 }
