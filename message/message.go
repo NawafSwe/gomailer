@@ -130,3 +130,18 @@ func SendWithTLS(e Message, addr string, a smtp.Auth, tlsCfg *tls.Config) error 
 	}()
 	return client.Quit()
 }
+
+//type Attachment struct {
+//	Filename string
+//	Data     []byte
+//	MIMEType string
+//}
+//
+//type Message struct {
+//	// existing fields...
+//	Attachments []Attachment
+//}
+//
+//func (m Message) Encode() ([]byte, error) {
+//	// Extend this function to handle MIME multipart encoding for attachments.
+//}

@@ -12,14 +12,14 @@ import (
 )
 
 const (
-	sslPort   = 465
-	crmAuth   = "CRAM-MD5"
-	plainAuth = "PLAIN"
+	sslPort            = 465
+	crmAuthMechanism   = "CRAM-MD5"
+	plainAuthMechanism = "PLAIN"
+	loginAuthMechanism = "LOGIN"
 )
 
 //go:generate mockgen -source=mailer.go -destination=mock/mailer.go -package=mock
 type (
-
 	// Options to configure Mailer.
 	Options func(*Mailer)
 
@@ -41,6 +41,7 @@ type (
 		// the authentication attempt and closes the connection.
 		Next(fromServer []byte, more bool) (toServer []byte, err error)
 	}
+
 	// smtpClient for implementing smtpClient
 	smtpClient interface {
 		Hello(string) error
@@ -53,9 +54,13 @@ type (
 		Quit() error
 		Close() error
 	}
-	// SendCloser wrapper encapsulate sending message functionally and closing connection to smtp.
+
+	// SendCloser is an interface that encapsulates the functionality of sending a message and closing the connection to the SMTP server.
+	// It provides methods to send an email message and to terminate the SMTP server session.
 	SendCloser interface {
+		// Close terminate the smtp server session.
 		Close() error
+		// Send sends message.Message.
 		Send(message message.Message) error
 	}
 
@@ -117,6 +122,14 @@ type (
 		// some of the data was successfully written.
 		// A zero value for t means Write will not time out.
 		SetWriteDeadline(t time.Time) error
+	}
+
+	// writeCloser is an interface used to mock the smtp.Data writeCloser.
+	// It encapsulates the methods required to write data to an SMTP server and close the connection.
+	// This interface is particularly useful for unit testing, allowing you to simulate the behavior of the SMTP server's data writer.
+	writeCloser interface {
+		Write([]byte) (int, error)
+		Close() error
 	}
 )
 
@@ -208,7 +221,7 @@ func NewMailer(host string, port int, username, password string, opts ...Options
 	return mailer
 }
 
-// Dial authenticates the Mailer to an SMTP server and saves the connection internally.
+// ConnectAndAuthenticate connects and authenticates the Mailer to an SMTP server and saves the connection internally.
 // To terminate the connection, the consumer must issue a Mailer.Close call after they finish sending emails.
 //
 // Returns:
@@ -225,7 +238,7 @@ func NewMailer(host string, port int, username, password string, opts ...Options
 // 6. Checks for supported authentication mechanisms and sets the appropriate authentication method.
 // 7. Authenticates with the SMTP server using the selected authentication method.
 // 8. Returns a mailSender instance that implements the SendCloser interface.
-func (m *Mailer) Dial() (SendCloser, error) {
+func (m *Mailer) ConnectAndAuthenticate() (SendCloser, error) {
 	netConn, err := netDialTimeout("tcp", m.addr(), m.dialTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial to smtp server: %w", err)
@@ -236,11 +249,11 @@ func (m *Mailer) Dial() (SendCloser, error) {
 	}
 	c, err := newSmtpClient(netConn, m.Host)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create smtp client: %w", err)
+		return nil, fmt.Errorf("failed to dial smtp server: %w", err)
 	}
 	if m.localName != "" {
 		if err := c.Hello(m.localName); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to dial smtp server: %w", err)
 		}
 	}
 
@@ -254,18 +267,9 @@ func (m *Mailer) Dial() (SendCloser, error) {
 			}
 		}
 	}
-
-	// check if auth is given
+	// check if auth is given or determine which auth mechanism to use.
 	if m.auth == nil && m.Username != "" {
-		if ok, auths := c.Extension("AUTH"); ok {
-			if strings.Contains(auths, crmAuth) {
-				m.auth = smtpCRAMMD5Auth(m.Username, m.Password)
-			} else if strings.Contains(auths, plainAuth) {
-				m.auth = smtpPlainAuth("", m.Username, m.Password, m.Host)
-			} else {
-				return nil, fmt.Errorf("unsupported auth mechanism: %s", auths)
-			}
-		}
+		m.authenticateToSmtpServer(c)
 	}
 	// authenticate
 	if m.auth != nil {
@@ -277,89 +281,130 @@ func (m *Mailer) Dial() (SendCloser, error) {
 	return &mailSender{m, c}, nil
 }
 
+// authenticateToSmtpServer function set the authentication mechanism for smtp server.
+func (m *Mailer) authenticateToSmtpServer(smtpClient smtpClient) {
+	if ok, auths := smtpClient.Extension("AUTH"); ok {
+		if strings.Contains(auths, crmAuthMechanism) {
+			m.auth = smtpCRAMMD5Auth(m.Username, m.Password)
+		} else if strings.Contains(auths, plainAuthMechanism) {
+			m.auth = smtpPlainAuth("", m.Username, m.Password, m.Host)
+		} else {
+			m.auth = newSmtpLoginAuth(m.Username, m.Password)
+		}
+	}
+}
+
 // Send dials the SMTP server with the proper authentication and sends an email.
 //
 // Parameters:
 //
-//	e (Email): The email to be sent.
+//   - message (message.Message): The message to be sent.
 //
 // Returns:
 //
-//	error: An error if the email could not be sent, or nil if the email was sent successfully.
+//   - error: An error if the email could not be sent, or nil if the email was sent successfully.
 //
 // The function performs the following steps:
-// 1. Validates the email using the `validate` method of the `Email` struct.
-// 2. Dials the SMTP server using the `Dial` method of the `Mailer` struct to establish a connection and authenticate.
-// 3. Sends the email using the `Send` method of the `SendCloser` interface.
-// 4. Closes the connection to the SMTP server.
+// 1. Connects and authenticates to the SMTP server using the `ConnectAndAuthenticate` method of the `Mailer` struct.
+// 2. Sends the email using the `Send` method of the `SendCloser` interface.
+// 3. Closes the connection to the SMTP server.
 //
 // Example usage:
 //
-//	mailer := NewMailer("smtp.example.com", 465, "user@example.com", "password", nil)
-//	email := Email{
+//	mailer := NewMailer("smtp.example.com", 465, "user@example.com", "password")
+//	message := message.Message{
 //	    From:       "sender@example.com",
 //	    Recipients: []string{"recipient@example.com"},
-//	    Subject:    "Test Email",
 //	    Body:       "This is a test email.",
 //	}
-//	err := mailer.Send(email)
+//	err := mailer.Send(message)
 //	if err != nil {
 //	    log.Fatalf("Failed to send email: %v", err)
 //	}
 func (m *Mailer) Send(message message.Message) error {
-	sender, err := m.Dial()
+	sender, err := m.ConnectAndAuthenticate()
 	if err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
+		return fmt.Errorf("failed to connect and authenticate: %w", err)
 	}
 	defer sender.Close()
 
 	if err := sender.Send(message); err != nil {
-		return fmt.Errorf("gomailer failed to send your email: %w", err)
+		return fmt.Errorf("failed to send message: %w", err)
 	}
 	return nil
 }
 
+// addr returns full adders.
 func (m *Mailer) addr() string {
 	return fmt.Sprintf("%s:%d", m.Host, m.Port)
 }
 
+// mailSender is a data struct that promotes the functionality of smtp.Client and supports features of Mailer.
 type mailSender struct {
+	// mailer is a reference to the Mailer instance that created this mailSender.
 	mailer *Mailer
+	// smtpClient is the SMTP client used to send emails.
 	smtpClient
 }
 
+// Send sends the provided message using the SMTP client.
+//
+// Parameters:
+//   - message (message.Message): The message to be sent.
+//
+// Returns:
+//   - error: An error if the message could not be sent, or nil if the message was sent successfully.
+//
+// The function performs the following steps:
+// 1. Sends the MAIL command with the sender's address.
+// 2. Sends the RCPT command for each recipient's address.
+// 3. Initiates the DATA command to start the message data transfer.
+// 4. Encodes the message and writes it to the SMTP client's data writer.
+// 5. Closes the data writer.
+//
+// If any step fails, an appropriate error is returned.
 func (m *mailSender) Send(message message.Message) error {
 	if err := m.Mail(message.From); err != nil {
-		return fmt.Errorf("smpt client failed to mail from address %s: %w", message.From, err)
+		return fmt.Errorf("mailer failed to send MAIL command for address %s: %w", message.From, err)
 	}
 
 	for _, t := range message.Recipients {
 		if err := m.Rcpt(t); err != nil {
-			return fmt.Errorf("smtp client failed to send rcpt command to server for address %s: %w", t, err)
+			return fmt.Errorf("mailer failed to send rcpt command for address %s: %w", t, err)
 		}
 	}
 	w, err := m.Data()
 
 	if err != nil {
-		return fmt.Errorf("failed to get data writer from smtp client: %w", err)
+		return fmt.Errorf("mailer failed to get data writer: %w", err)
 	}
 	encodedMsg, err := message.Encode()
 	if err != nil {
 		return fmt.Errorf("failed to send message: %w", err)
 	}
 	_, err = w.Write(encodedMsg)
-	if err != nil {
-		return fmt.Errorf("failed writing data: %w", err)
-	}
 	defer func() {
 		_ = w.Close()
 	}()
+	if err != nil {
+		return fmt.Errorf("failed writing data: %w", err)
+	}
 
 	return nil
 }
+
+// Close closes the connection between the client and the SMTP server.
+//
+// Returns:
+//   - error: An error if the connection could not be closed, or nil if the connection was closed successfully.
+//
+// The function performs the following steps:
+// 1. Sends the QUIT command to the SMTP server to terminate the session.
+// 2. If the QUIT command fails, it returns an error indicating the failure.
+// 3. If the QUIT command succeeds, it returns nil.
 func (m *mailSender) Close() error {
 	if err := m.Quit(); err != nil {
-		return fmt.Errorf("MailSender failed to close connection to smtp server: %w", err)
+		return fmt.Errorf("failed to close connection to smtp server: %w", err)
 	}
 	return nil
 }
