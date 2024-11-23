@@ -2,6 +2,7 @@ package gomailer
 
 import (
 	"crypto/tls"
+	"fmt"
 	mailerMock "github.com/NawafSwe/gomailer/mock"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -68,6 +69,7 @@ func TestMailer_NewMailer(t *testing.T) {
 }
 
 func TestMailer_Dial(t *testing.T) {
+	dummyErr := fmt.Errorf("dummy error")
 	t.Run("should dial smtp server via mailer without tls config using plain auth", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		// prepare mocks
@@ -93,8 +95,37 @@ func TestMailer_Dial(t *testing.T) {
 
 		// expect on mocks
 		smtpMock.EXPECT().Extension("STARTTLS").Return(false, "STARTTLS")
-		smtpMock.EXPECT().Extension("AUTH").Return(true, plainAuth)
+		smtpMock.EXPECT().Extension("AUTH").Return(true, plainAuthMechanism)
 		smtpMock.EXPECT().Auth(authMock).Return(nil)
+
+		// dial smtp server and obtain sender.
+		smtpSender, err := mailer.Dial()
+
+		assert.Nil(t, err)
+		assert.NotNil(t, smtpSender)
+	})
+	t.Run("should dial smtp server via mailer without tls config using login auth", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		// prepare mocks
+		smtpMock := mailerMock.NewMocksmtpClient(ctrl)
+		netConnMock := mailerMock.NewMockconn(ctrl)
+
+		// stub functions
+		newSmtpClient = func(conn net.Conn, host string) (smtpClient, error) {
+			return smtpMock, nil
+		}
+		netDialTimeout = func(network string, host string, t time.Duration) (net.Conn, error) {
+			return netConnMock, nil
+		}
+
+		// init mailer
+		mailer := NewMailer(testHost, testPort, testUser, testPassword)
+		assert.NotNil(t, mailer)
+
+		// expect on mocks
+		smtpMock.EXPECT().Extension("STARTTLS").Return(false, "STARTTLS")
+		smtpMock.EXPECT().Extension("AUTH").Return(true, loginAuthMechanism)
+		smtpMock.EXPECT().Auth(newSmtpLoginAuth(testUser, testPassword)).Return(nil)
 
 		// dial smtp server and obtain sender.
 		smtpSender, err := mailer.Dial()
@@ -129,7 +160,7 @@ func TestMailer_Dial(t *testing.T) {
 		assert.NotNil(t, mailer)
 
 		// expect on mocks
-		smtpMock.EXPECT().Extension("AUTH").Return(true, crmAuth)
+		smtpMock.EXPECT().Extension("AUTH").Return(true, crmAuthMechanism)
 		smtpMock.EXPECT().Auth(authMock).Return(nil)
 
 		// dial smtp server and obtain sender.
@@ -166,7 +197,7 @@ func TestMailer_Dial(t *testing.T) {
 		smtpMock.EXPECT().Hello(testLocalName).Return(nil)
 		smtpMock.EXPECT().Extension("STARTTLS").Return(true, "STARTTLS")
 		smtpMock.EXPECT().StartTLS(mailer.tlsConfig).Return(nil)
-		smtpMock.EXPECT().Extension("AUTH").Return(true, plainAuth)
+		smtpMock.EXPECT().Extension("AUTH").Return(true, plainAuthMechanism)
 		smtpMock.EXPECT().Auth(authMock).Return(nil)
 
 		// dial smtp server and obtain sender.
@@ -175,7 +206,136 @@ func TestMailer_Dial(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, smtpSender)
 	})
+	t.Run("should fail to dial smtp server when failed to establish a tcp connection", func(t *testing.T) {
 
+		netDialTimeout = func(network string, host string, t time.Duration) (net.Conn, error) {
+			return nil, dummyErr
+		}
+
+		mailer := NewMailer(testHost, testPort, testUser, testPassword)
+		smtpSender, err := mailer.Dial()
+		assert.NotNil(t, err)
+		assert.Equal(t, fmt.Errorf("failed to dial to smtp server: %w", dummyErr), err)
+		assert.Nil(t, smtpSender)
+
+	})
+	t.Run("should fail to dial smtp server when failed to create a smtp client", func(t *testing.T) {
+
+		ctrl := gomock.NewController(t)
+		netConnMock := mailerMock.NewMockconn(ctrl)
+
+		// stub functions
+		newSmtpClient = func(conn net.Conn, host string) (smtpClient, error) {
+			return nil, dummyErr
+		}
+
+		netDialTimeout = func(network string, host string, t time.Duration) (net.Conn, error) {
+			return netConnMock, nil
+		}
+
+		mailer := NewMailer(testHost, testPort, testUser, testPassword)
+		smtpSender, err := mailer.Dial()
+		assert.NotNil(t, err)
+		assert.Equal(t, fmt.Errorf("failed to dial smtp server: %w", dummyErr), err)
+		assert.Nil(t, smtpSender)
+
+	})
+	t.Run("should fail to dial smtp server when failed to issue HELLO cmd to smtp server", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		// prepare mocks
+		smtpMock := mailerMock.NewMocksmtpClient(ctrl)
+		netConnMock := mailerMock.NewMockconn(ctrl)
+
+		// stub functions
+		newSmtpClient = func(conn net.Conn, host string) (smtpClient, error) {
+			return smtpMock, nil
+		}
+
+		netDialTimeout = func(network string, host string, t time.Duration) (net.Conn, error) {
+			return netConnMock, nil
+		}
+
+		// init mailer
+		mailer := NewMailer(testHost, testPort, testUser, testPassword, WithLocalName(testLocalName))
+		assert.NotNil(t, mailer)
+
+		// expect on mocks
+		smtpMock.EXPECT().Hello(testLocalName).Return(dummyErr)
+		// dial smtp server and obtain sender.
+		smtpSender, err := mailer.Dial()
+		assert.NotNil(t, err)
+		assert.Equal(t, fmt.Errorf("failed to dial smtp server: %w", dummyErr), err)
+		assert.Nil(t, smtpSender)
+
+	})
+	t.Run("should fail dial smtp server when server received a failure in issuing STARTTLS cmd", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		// prepare mocks
+		smtpMock := mailerMock.NewMocksmtpClient(ctrl)
+		netConnMock := mailerMock.NewMockconn(ctrl)
+
+		// stub functions
+		newSmtpClient = func(conn net.Conn, host string) (smtpClient, error) {
+			return smtpMock, nil
+		}
+
+		netDialTimeout = func(network string, host string, t time.Duration) (net.Conn, error) {
+			return netConnMock, nil
+		}
+
+		// init mailer
+		mailer := NewMailer(testHost, testPort, testUser, testPassword, WithLocalName(testLocalName))
+		assert.NotNil(t, mailer)
+
+		// expect on mocks
+		smtpMock.EXPECT().Hello(testLocalName).Return(nil)
+		smtpMock.EXPECT().Extension("STARTTLS").Return(true, "STARTTLS")
+		smtpMock.EXPECT().StartTLS(mailer.tlsConfig).Return(dummyErr)
+		smtpMock.EXPECT().Close().Return(nil)
+
+		// dial smtp server and obtain sender.
+		smtpSender, err := mailer.Dial()
+
+		assert.NotNil(t, err)
+		assert.Equal(t, fmt.Errorf("failed to StartTLS: %w", dummyErr), err)
+		assert.Nil(t, smtpSender)
+	})
+	t.Run("should fail dial smtp server via mailer using tls config when smtp failed to authenticate with smtp server", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		// prepare mocks
+		smtpMock := mailerMock.NewMocksmtpClient(ctrl)
+		netConnMock := mailerMock.NewMockconn(ctrl)
+		authMock := mailerMock.NewMockauth(ctrl)
+
+		// stub functions
+		newSmtpClient = func(conn net.Conn, host string) (smtpClient, error) {
+			return smtpMock, nil
+		}
+		netDialTimeout = func(network string, host string, t time.Duration) (net.Conn, error) {
+			return netConnMock, nil
+		}
+
+		smtpPlainAuth = func(identity, username, password, host string) auth {
+			return authMock
+		}
+
+		// init mailer
+		mailer := NewMailer(testHost, testPort, testUser, testPassword)
+		assert.NotNil(t, mailer)
+
+		// expect on mocks
+		smtpMock.EXPECT().Extension("STARTTLS").Return(false, "STARTTLS")
+		smtpMock.EXPECT().Extension("AUTH").Return(true, plainAuthMechanism)
+		smtpMock.EXPECT().Auth(authMock).Return(dummyErr)
+		smtpMock.EXPECT().Close().Return(nil)
+
+		// dial smtp server and obtain sender.
+		smtpSender, err := mailer.Dial()
+
+		assert.NotNil(t, err)
+		assert.Equal(t, fmt.Errorf("failed to authenticate with smtp server: %w", dummyErr), err)
+		assert.Nil(t, smtpSender)
+	})
 	// fail hello
 	// fail net dail timeout
 	// fail create smtp client

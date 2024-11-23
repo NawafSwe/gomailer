@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	sslPort   = 465
-	crmAuth   = "CRAM-MD5"
-	plainAuth = "PLAIN"
+	sslPort            = 465
+	crmAuthMechanism   = "CRAM-MD5"
+	plainAuthMechanism = "PLAIN"
+	loginAuthMechanism = "LOGIN"
 )
 
 //go:generate mockgen -source=mailer.go -destination=mock/mailer.go -package=mock
@@ -236,11 +237,11 @@ func (m *Mailer) Dial() (SendCloser, error) {
 	}
 	c, err := newSmtpClient(netConn, m.Host)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create smtp client: %w", err)
+		return nil, fmt.Errorf("failed to dial smtp server: %w", err)
 	}
 	if m.localName != "" {
 		if err := c.Hello(m.localName); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to dial smtp server: %w", err)
 		}
 	}
 
@@ -254,18 +255,9 @@ func (m *Mailer) Dial() (SendCloser, error) {
 			}
 		}
 	}
-
-	// check if auth is given
+	// check if auth is given or determine which auth mechanism to use.
 	if m.auth == nil && m.Username != "" {
-		if ok, auths := c.Extension("AUTH"); ok {
-			if strings.Contains(auths, crmAuth) {
-				m.auth = smtpCRAMMD5Auth(m.Username, m.Password)
-			} else if strings.Contains(auths, plainAuth) {
-				m.auth = smtpPlainAuth("", m.Username, m.Password, m.Host)
-			} else {
-				return nil, fmt.Errorf("unsupported auth mechanism: %s", auths)
-			}
-		}
+		m.authenticateToSmtpServer(c)
 	}
 	// authenticate
 	if m.auth != nil {
@@ -275,6 +267,19 @@ func (m *Mailer) Dial() (SendCloser, error) {
 		}
 	}
 	return &mailSender{m, c}, nil
+}
+
+// authenticateToSmtpServer function set the authentication mechanism for smtp server.
+func (m *Mailer) authenticateToSmtpServer(smtpClient smtpClient) {
+	if ok, auths := smtpClient.Extension("AUTH"); ok {
+		if strings.Contains(auths, crmAuthMechanism) {
+			m.auth = smtpCRAMMD5Auth(m.Username, m.Password)
+		} else if strings.Contains(auths, plainAuthMechanism) {
+			m.auth = smtpPlainAuth("", m.Username, m.Password, m.Host)
+		} else {
+			m.auth = newSmtpLoginAuth(m.Username, m.Password)
+		}
+	}
 }
 
 // Send dials the SMTP server with the proper authentication and sends an email.
