@@ -63,6 +63,7 @@ func (m Message) validate() error {
 	}
 	return nil
 }
+
 func (m Message) Encode() ([]byte, error) {
 	if err := m.validate(); err != nil {
 		return nil, fmt.Errorf("failed to encode message: %w", err)
@@ -120,7 +121,6 @@ func SendWithTLS(e Message, addr string, a smtp.Auth, tlsCfg *tls.Config) error 
 		}
 	}
 	w, err := client.Data()
-
 	if err != nil {
 		return fmt.Errorf("failed to get data writer from smtp client: %w", err)
 	}
