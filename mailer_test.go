@@ -3,14 +3,15 @@ package gomailer
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/NawafSwe/gomailer/message"
-	mailerMock "github.com/NawafSwe/gomailer/mock"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
 	"net"
 	"net/smtp"
 	"testing"
 	"time"
+
+	"github.com/NawafSwe/gomailer/message"
+	mailerMock "github.com/NawafSwe/gomailer/mock"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 )
 
 // test variables.
@@ -25,9 +26,7 @@ const (
 	testFromEmail = "test@gomailer.com"
 )
 
-var (
-	testRecipient = []string{"test@gomailer.com"}
-)
+var testRecipient = []string{"test@gomailer.com"}
 
 func TestMailer_NewMailer(t *testing.T) {
 	// Possible SMTP-client stuff for iteration with mock server
@@ -72,7 +71,6 @@ func TestMailer_NewMailer(t *testing.T) {
 		mailer := NewMailer(arg.host, arg.port, arg.username, arg.password, arg.options...)
 		assert.NotNil(t, mailer)
 	})
-
 }
 
 func TestMailer_ConnectAndAuthenticate(t *testing.T) {
@@ -214,7 +212,6 @@ func TestMailer_ConnectAndAuthenticate(t *testing.T) {
 		assert.NotNil(t, smtpSender)
 	})
 	t.Run("should fail to connect and authenticate to smtp server when failed to establish a tcp connection", func(t *testing.T) {
-
 		netDialTimeout = func(network string, host string, t time.Duration) (net.Conn, error) {
 			return nil, dummyErr
 		}
@@ -224,10 +221,8 @@ func TestMailer_ConnectAndAuthenticate(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Equal(t, fmt.Errorf("failed to dial to smtp server: %w", dummyErr), err)
 		assert.Nil(t, smtpSender)
-
 	})
 	t.Run("should fail to connect and authenticate to smtp server when failed to create a smtp client", func(t *testing.T) {
-
 		ctrl := gomock.NewController(t)
 		netConnMock := mailerMock.NewMockconn(ctrl)
 
@@ -245,7 +240,6 @@ func TestMailer_ConnectAndAuthenticate(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Equal(t, fmt.Errorf("failed to dial smtp server: %w", dummyErr), err)
 		assert.Nil(t, smtpSender)
-
 	})
 	t.Run("should fail to connect and authenticate to SMTP server when issuing HELLO command fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -273,7 +267,6 @@ func TestMailer_ConnectAndAuthenticate(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Equal(t, fmt.Errorf("failed to dial smtp server: %w", dummyErr), err)
 		assert.Nil(t, smtpSender)
-
 	})
 	t.Run("should fail to connect and authenticate to SMTP server when issuing STARTTLS command fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -796,5 +789,4 @@ func TestMailer_Send(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Equal(t, "failed to send message: failed to send message: failed to encode message: from address cannot be empty", err.Error())
 	})
-
 }

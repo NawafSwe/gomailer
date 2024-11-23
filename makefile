@@ -24,12 +24,8 @@ tests:
 	go test -tags unit -shuffle=on -coverprofile coverage.out ./...
 
 
-#====================#
-#== QUALITY CHECKS ==#
-#====================#
-
 format:
 	@echo "=========================================="
 	@echo "Formatting your code"
 	@echo "=========================================="
-	gofumpt -l -w . && gci write .
+	gci write -s standard -s default . --skip-generated --skip-vendor  && gofumpt -l -w .

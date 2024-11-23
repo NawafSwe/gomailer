@@ -3,12 +3,13 @@ package gomailer
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/NawafSwe/gomailer/message"
 	"io"
 	"net"
 	"net/smtp"
 	"strings"
 	"time"
+
+	"github.com/NawafSwe/gomailer/message"
 )
 
 const (
@@ -140,6 +141,7 @@ func defaultTLSCfg(host string) *tls.Config {
 		ServerName: host,
 	}
 }
+
 func defaultDialTimeout() time.Duration {
 	return time.Second * 5
 }
@@ -374,7 +376,6 @@ func (m *mailSender) Send(message message.Message) error {
 		}
 	}
 	w, err := m.Data()
-
 	if err != nil {
 		return fmt.Errorf("mailer failed to get data writer: %w", err)
 	}
