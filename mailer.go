@@ -19,7 +19,7 @@ const (
 	loginAuthMechanism = "LOGIN"
 )
 
-//go:generate mockgen -source=mailer.go -destination=mock/mailer.go -package=mock
+//go:generate mockgen -source=mailer.go -destination=internal/mock/mailer.go -package=mock
 type (
 	// Options to configure Mailer.
 	Options func(*Mailer)
@@ -182,6 +182,24 @@ func WithAuth(auth smtp.Auth) func(*Mailer) {
 	}
 }
 
+// WithSecrets configures Mailer with secrets to authenticate for CRAM-MD5.
+func WithSecrets(s string) func(*Mailer) {
+	return func(mailer *Mailer) {
+		if s != "" {
+			mailer.secrets = s
+		}
+	}
+}
+
+// WithSSLEnabled configures Mailer with ssl option.
+func WithSSLEnabled(s bool) func(*Mailer) {
+	return func(mailer *Mailer) {
+		if s {
+			mailer.sslEnabled = s
+		}
+	}
+}
+
 // Mailer encapsulates the connection overhead and holds the email functionality.
 // It provides methods to send emails with and without TLS.
 type Mailer struct {
@@ -199,6 +217,12 @@ type Mailer struct {
 	auth smtp.Auth
 	// tlsConfig represents the TLS configuration used.
 	tlsConfig *tls.Config
+
+	// sslEnabled indicates whether SSL is enabled.
+	sslEnabled bool
+
+	// secrets used for CRAM-MD5 authentication.
+	secrets string
 
 	// dialTimeout represents a timeout configuration for connecting to smtp server.
 	dialTimeout time.Duration
@@ -259,7 +283,7 @@ func (m *Mailer) ConnectAndAuthenticate() (SendCloser, error) {
 		}
 	}
 
-	if m.Port != sslPort {
+	if !m.sslEnabled {
 		// check if conn starts with tls
 		// if starts apply tls config.
 		if ok, _ := c.Extension("STARTTLS"); ok {
@@ -271,7 +295,7 @@ func (m *Mailer) ConnectAndAuthenticate() (SendCloser, error) {
 	}
 	// check if auth is given or determine which auth mechanism to use.
 	if m.auth == nil && m.Username != "" {
-		m.authenticateToSmtpServer(c)
+		m.authenticationMechanism(c)
 	}
 	// authenticate
 	if m.auth != nil {
@@ -283,11 +307,11 @@ func (m *Mailer) ConnectAndAuthenticate() (SendCloser, error) {
 	return &mailSender{m, c}, nil
 }
 
-// authenticateToSmtpServer function set the authentication mechanism for smtp server.
-func (m *Mailer) authenticateToSmtpServer(smtpClient smtpClient) {
+// authenticationMechanism function set the authentication mechanism for smtp server.
+func (m *Mailer) authenticationMechanism(smtpClient smtpClient) {
 	if ok, auths := smtpClient.Extension("AUTH"); ok {
 		if strings.Contains(auths, crmAuthMechanism) {
-			m.auth = smtpCRAMMD5Auth(m.Username, m.Password)
+			m.auth = smtpCRAMMD5Auth(m.Username, m.secrets)
 		} else if strings.Contains(auths, plainAuthMechanism) {
 			m.auth = smtpPlainAuth("", m.Username, m.Password, m.Host)
 		} else {
