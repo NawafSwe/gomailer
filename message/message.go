@@ -1,10 +1,8 @@
 package message
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/mail"
-	"net/smtp"
 )
 
 const (
@@ -69,66 +67,6 @@ func (m Message) Encode() ([]byte, error) {
 		return nil, fmt.Errorf("failed to encode message: %w", err)
 	}
 	return encode(m), nil
-}
-
-// Send sends email using smtp.Auth.
-func Send(m Message, addr string, a smtp.Auth) error {
-	if a == nil {
-		return fmt.Errorf("smtp.auth cannot be nil")
-	}
-	// validating email.
-	err := m.validate()
-	if err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
-	}
-
-	return smtp.SendMail(addr, a, m.From, m.Recipients, encode(m))
-}
-
-// SendWithTLS sends email over a tls with an optional tls.Config
-// TLS helps establish a secure and trusted connection between the client and server,
-// which is essential for applications that handle sensitive data, such as online banking, email, and e-commerce.
-func SendWithTLS(e Message, addr string, a smtp.Auth, tlsCfg *tls.Config) error {
-	if a == nil {
-		return fmt.Errorf("smtp.auth cannot be nil")
-	}
-
-	// validating email.
-	err := e.validate()
-	if err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
-	}
-
-	conn, err := tls.Dial("tcp", addr, tlsCfg)
-	if err != nil {
-		return fmt.Errorf("failed to dail addr %s: %w", addr, err)
-	}
-	client, err := smtp.NewClient(conn, tlsCfg.ServerName)
-	if err != nil {
-		return fmt.Errorf("failed to create a smtp client: %w", err)
-	}
-
-	if err = client.Auth(a); err != nil {
-		return fmt.Errorf("failed to authenticate with smtp server: %w", err)
-	}
-
-	if err = client.Mail(e.From); err != nil {
-		return fmt.Errorf("smpt client failed to mail from address %s: %w", e.From, err)
-	}
-	for _, t := range e.Recipients {
-		if err := client.Rcpt(t); err != nil {
-			return fmt.Errorf("smtp client failed to send rcpt command to server for address %s: %w", t, err)
-		}
-	}
-	w, err := client.Data()
-	if err != nil {
-		return fmt.Errorf("failed to get data writer from smtp client: %w", err)
-	}
-	_, _ = w.Write(encode(e))
-	defer func() {
-		_ = w.Close()
-	}()
-	return client.Quit()
 }
 
 //type Attachment struct {
