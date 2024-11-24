@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	mailerMock "github.com/NawafSwe/gomailer/internal/mock"
 	"github.com/NawafSwe/gomailer/message"
-	mailerMock "github.com/NawafSwe/gomailer/mock"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
@@ -64,6 +64,8 @@ func TestMailer_NewMailer(t *testing.T) {
 			options: []Options{
 				WithLocalName(testLocalName),
 				WithDialTimeout(time.Second),
+				WithSecrets(""),
+				WithSSLEnabled(true),
 				WithTLSConfig(&tls.Config{ServerName: testHost}),
 				WithAuth(smtp.PlainAuth("", testUser, testPassword, testHost)),
 			},
@@ -161,7 +163,7 @@ func TestMailer_ConnectAndAuthenticate(t *testing.T) {
 		}
 
 		// init mailer
-		mailer := NewMailer(testHost, testSSLPort, testUser, testPassword)
+		mailer := NewMailer(testHost, testSSLPort, testUser, "", WithSSLEnabled(true), WithSecrets(testPassword))
 		assert.NotNil(t, mailer)
 
 		// expect on mocks
@@ -363,7 +365,7 @@ func TestMailer_Send(t *testing.T) {
 		}
 
 		// init mailer
-		mailer := NewMailer(testHost, testSSLPort, testUser, testPassword)
+		mailer := NewMailer(testHost, testSSLPort, testUser, "", WithSSLEnabled(true), WithSecrets(testPassword))
 		assert.NotNil(t, mailer)
 
 		msg := message.Message{
@@ -414,7 +416,7 @@ func TestMailer_Send(t *testing.T) {
 		}
 
 		// init mailer
-		mailer := NewMailer(testHost, testSSLPort, testUser, testPassword)
+		mailer := NewMailer(testHost, testSSLPort, testUser, "", WithSSLEnabled(true), WithSecrets(testPassword))
 		assert.NotNil(t, mailer)
 
 		msg := message.Message{
@@ -459,7 +461,7 @@ func TestMailer_Send(t *testing.T) {
 		}
 
 		// init mailer
-		mailer := NewMailer(testHost, testSSLPort, testUser, testPassword)
+		mailer := NewMailer(testHost, testSSLPort, testUser, "", WithSSLEnabled(true), WithSecrets(testPassword))
 		assert.NotNil(t, mailer)
 
 		msg := message.Message{
@@ -511,7 +513,7 @@ func TestMailer_Send(t *testing.T) {
 		}
 
 		// init mailer
-		mailer := NewMailer(testHost, testSSLPort, testUser, testPassword)
+		mailer := NewMailer(testHost, testSSLPort, testUser, "", WithSSLEnabled(true), WithSecrets(testPassword))
 		assert.NotNil(t, mailer)
 		msg := message.Message{
 			From:       testFromEmail,
@@ -556,7 +558,7 @@ func TestMailer_Send(t *testing.T) {
 		}
 
 		// init mailer
-		mailer := NewMailer(testHost, testSSLPort, testUser, testPassword)
+		mailer := NewMailer(testHost, testSSLPort, testUser, "", WithSSLEnabled(true), WithSecrets(testPassword))
 		assert.NotNil(t, mailer)
 		msg := message.Message{
 			From:       testFromEmail,
@@ -603,7 +605,7 @@ func TestMailer_Send(t *testing.T) {
 		}
 
 		// init mailer
-		mailer := NewMailer(testHost, testSSLPort, testUser, testPassword)
+		mailer := NewMailer(testHost, testSSLPort, testUser, "", WithSSLEnabled(true), WithSecrets(testPassword))
 		assert.NotNil(t, mailer)
 		msg := message.Message{
 			From:       testFromEmail,
@@ -651,7 +653,7 @@ func TestMailer_Send(t *testing.T) {
 		}
 
 		// init mailer
-		mailer := NewMailer(testHost, testSSLPort, testUser, testPassword)
+		mailer := NewMailer(testHost, testSSLPort, testUser, "", WithSSLEnabled(true), WithSecrets(testPassword))
 		assert.NotNil(t, mailer)
 		msg := message.Message{
 			From:       "",
@@ -699,7 +701,7 @@ func TestMailer_Send(t *testing.T) {
 		}
 
 		// init mailer
-		mailer := NewMailer(testHost, testSSLPort, testUser, testPassword)
+		mailer := NewMailer(testHost, testSSLPort, testUser, "", WithSSLEnabled(true), WithSecrets(testPassword))
 		assert.NotNil(t, mailer)
 		msg := message.Message{
 			From:       testFromEmail,
@@ -770,7 +772,7 @@ func TestMailer_Send(t *testing.T) {
 		}
 
 		// init mailer
-		mailer := NewMailer(testHost, testSSLPort, testUser, testPassword)
+		mailer := NewMailer(testHost, testSSLPort, testUser, "", WithSSLEnabled(true), WithSecrets(testPassword))
 		assert.NotNil(t, mailer)
 		msg := message.Message{
 			From:       "",
