@@ -13,9 +13,15 @@ const (
 	defaultContentType = "text/plain; charset=us-ascii"
 	// htmlTypeContentType to support content type with HTML.
 	htmlTypeContentType = "text/html; charset=UTF-8"
-	// message Lint: http://tools.ietf.org/tools/msglint/
+	boundary            = "my-boundary-12345"
+
+	// https://datatracker.ietf.org/doc/html/rfc5322
 	crlf      = "\r\n"
 	separator = ", "
+)
+
+var (
+	multiPartContentType = fmt.Sprintf("multipart/mixed; boundary=%s", boundary)
 )
 
 // Message will be sent in email.
@@ -36,10 +42,15 @@ type Message struct {
 	Subject string
 	// Headers Extra mail headers
 	Headers mail.Header
+
+	// Attachments any files attached to email.
+	Attachments []Attachment
 }
 
 func NewMessage() Message {
-	return Message{}
+	return Message{
+		Attachments: make([]Attachment, 0),
+	}
 }
 
 // validate validates message primary fields before send operation.
@@ -69,17 +80,9 @@ func (m Message) Encode() ([]byte, error) {
 	return encode(m), nil
 }
 
-//type Attachment struct {
-//	Filename string
-//	Data     []byte
-//	MIMEType string
-//}
-//
-//type Message struct {
-//	// existing fields...
-//	Attachments []Attachment
-//}
-//
-//func (m Message) Encode() ([]byte, error) {
-//	// Extend this function to handle MIME multipart encoding for attachments.
-//}
+// Attachment attached files to Message.
+type Attachment struct {
+	Filename string
+	Data     []byte
+	MIMEType string
+}
