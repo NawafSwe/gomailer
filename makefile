@@ -29,3 +29,15 @@ format:
 	@echo "Formatting your code"
 	@echo "=========================================="
 	gci write -s standard -s default . --skip-generated --skip-vendor  && gofumpt -l -w .
+
+
+
+lint: ## Run all enabled linters
+	@echo "=========================================="
+	@echo "Running static analysis"
+	@echo "Use 'fix=true' to fix issues automatically"
+	@echo "Use 'use_github_pat=true' to use github personal access token to download packages"
+	@echo "=========================================="
+	LINTER_FLAGS="-v"; \
+    	golangci-lint run ${LINTER_FLAGS}; \
+    	docker run -t --rm -v ${PWD}:/app -v $$(go env GOMODCACHE):/go/pkg/mod  -w /app golangci/golangci-lint:v1.61.0 sh -c "$${CMD}"
