@@ -23,6 +23,8 @@ func splitLines(input string, maxLength int) []string {
 }
 
 // encode encodes mail components into bytes to be sent.
+// TODO: handle alternative use case
+// TODO: when mail should have two parts one plain text and one is html.
 func encode(m Message) []byte {
 	var mailMessage strings.Builder
 	mailSubjectEncoded := "=?UTF-8?B?" + encodeBase64(m.Subject) + "?="
