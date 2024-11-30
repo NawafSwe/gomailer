@@ -24,39 +24,36 @@ func splitLines(input string, maxLength int) []string {
 
 // encode encodes mail components into bytes to be sent.
 func encode(m Message) []byte {
+	var mailMessage strings.Builder
 	mailSubjectEncoded := "=?UTF-8?B?" + encodeBase64(m.Subject) + "?="
-	headers := make(map[string]string)
 	hasAttachement := len(m.Attachments) > 0
-	headers["MIME-Version"] = "1.0"
-
+	mailMessage.WriteString(fmt.Sprintf("MIME-Version: 1.0%s", crlf))
+	mailMessage.WriteString(fmt.Sprintf("Subject: %s%s", mailSubjectEncoded, crlf))
+	mailMessage.WriteString(fmt.Sprintf("From: %s%s", m.From, crlf))
 	if hasAttachement {
-		headers["Content-Type"] = multiPartContentType
+		mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", multiPartContentType, crlf))
 	} else if m.HTMLBody != "" {
-		headers["Content-Type"] = htmlTypeContentType
+		mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", htmlTypeContentType, crlf))
 	} else {
-		headers["Content-Type"] = defaultContentType
+		mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", defaultContentType, crlf))
 	}
-	headers["Subject"] = mailSubjectEncoded
-	headers["From"] = m.From
 
 	if len(m.Recipients) > 0 {
-		headers["To"] = strings.Join(m.Recipients, separator)
+		mailMessage.WriteString(fmt.Sprintf("To: %s%s", strings.Join(m.Recipients, separator), crlf))
 	}
 	if len(m.Cc) > 0 {
-		headers["Cc"] = strings.Join(m.Cc, separator)
+		mailMessage.WriteString(fmt.Sprintf("Cc: %s%s", strings.Join(m.Cc, separator), crlf))
 	}
 
 	if len(m.Bcc) > 0 {
-		headers["Bcc"] = strings.Join(m.Bcc, separator)
+		mailMessage.WriteString(fmt.Sprintf("Bcc: %s%s", strings.Join(m.Bcc, separator), crlf))
 	}
-
+	// additional headers if any.
 	for k, v := range m.Headers {
-		headers[k] = v[0]
+		mailMessage.WriteString(fmt.Sprintf("%s: %s%s", k, strings.Join(v, ", "), crlf))
 	}
-	var mailMessage strings.Builder
-	for k, v := range headers {
-		mailMessage.WriteString(fmt.Sprintf("%s: %s%s", k, v, crlf))
-	}
+	// How to guarantee order?
+
 	mailMessage.WriteString(crlf)
 
 	// if Message has attachement
@@ -67,7 +64,7 @@ func encode(m Message) []byte {
 		} else {
 			mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", defaultContentType, crlf))
 		}
-		mailMessage.WriteString(fmt.Sprintf("Content-Transfer-Encoding: 7bit%s", crlf))
+		mailMessage.WriteString(fmt.Sprintf("Content-Transfer-Encoding: 8bit%s", crlf))
 		mailMessage.WriteString(crlf)
 		if m.HTMLBody != "" {
 			mailMessage.WriteString(m.HTMLBody)

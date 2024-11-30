@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+const (
+	testEmail = "test.usr@smtp.com"
+)
+
 func TestMessage_EncodeBase64(t *testing.T) {
 	t.Parallel()
 	t.Run("should encode message to base64", func(t *testing.T) {
@@ -36,10 +40,89 @@ func TestMessage_SplitLines(t *testing.T) {
 }
 
 func TestMessage_Encode(t *testing.T) {
-	// testing message with html body and normal text
-	// testing message with body only
-	// testing message with html only
-	// testing message with html body attachments
-	// testing with attachment only
+	tests := map[string]struct {
+		input Message
+		want  string
+	}{
+		"should encode message in the expected format when message has an html only with to,cc, and bcc": {
+			input: Message{
+				From:       "gomailer@smtp.com",
+				Recipients: []string{testEmail},
+				Cc:         []string{testEmail},
+				Bcc:        []string{testEmail},
+				HTMLBody:   "<p>hello</p>",
+				Subject:    "testing html body",
+			},
+			want: "MIME-Version: 1.0\r\nSubject: =?UTF-8?B?dGVzdGluZyBodG1sIGJvZHk?=\r\nFrom: gomailer@smtp.com\r\nContent-Type: text/html; charset=UTF-8\r\nTo: test.usr@smtp.com\r\nCc: test.usr@smtp.com\r\nBcc: test.usr@smtp.com\r\n\r\n<p>hello</p>",
+		},
+		"should encode message in the expected format when message has an text body only with to,cc, and bcc": {
+			input: Message{
+				From:       "gomailer@smtp.com",
+				Recipients: []string{testEmail},
+				Cc:         []string{testEmail},
+				Bcc:        []string{testEmail},
+				Body:       "hello",
+				Subject:    "testing txt body",
+			},
+			want: "MIME-Version: 1.0\r\nSubject: =?UTF-8?B?dGVzdGluZyB0eHQgYm9keQ?=\r\nFrom: gomailer@smtp.com\r\nContent-Type: text/plain; charset=us-ascii\r\nTo: test.usr@smtp.com\r\nCc: test.usr@smtp.com\r\nBcc: test.usr@smtp.com\r\n\r\nhello\r\n",
+		},
+		"should encode message in the expected format when message has an text body and attachments with to,cc, and bcc": {
+			input: Message{
+				From:       "gomailer@smtp.com",
+				Recipients: []string{testEmail},
+				Cc:         []string{testEmail},
+				Bcc:        []string{testEmail},
+				Body:       "hello",
+				Attachments: []Attachment{{
+					Filename: "f1",
+					Data:     []byte("byte str"),
+					MIMEType: "application/pdf",
+				}},
+				Subject: "testing txt body with attachment",
+			},
+			want: "MIME-Version: 1.0\r\nSubject: =?UTF-8?B?dGVzdGluZyB0eHQgYm9keSB3aXRoIGF0dGFjaG1lbnQ?=\r\nFrom: gomailer@smtp.com\r\nContent-Type: multipart/mixed; boundary=BOUNDARY\r\nTo: test.usr@smtp.com\r\nCc: test.usr@smtp.com\r\nBcc: test.usr@smtp.com\r\n\r\n--BOUNDARY\r\nContent-Type: text/plain; charset=us-ascii\r\nContent-Transfer-Encoding: 8bit\r\n\r\nhello\r\n\r\n--BOUNDARY\r\nContent-Type: application/pdf; name=\"f1\"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"f1\"\r\n\r\nYnl0ZSBzdHI\r\n\r\n--BOUNDARY--\r\n",
+		},
+		"should encode message in the expected format when message has an html body and attachments with to,cc, and bcc": {
+			input: Message{
+				From:       "gomailer@smtp.com",
+				Recipients: []string{testEmail},
+				Cc:         []string{testEmail},
+				Bcc:        []string{testEmail},
+				HTMLBody:   "<p>hello</p>",
+				Attachments: []Attachment{{
+					Filename: "f1",
+					Data:     []byte("byte str"),
+					MIMEType: "application/pdf",
+				}},
+				Subject: "testing txt body with attachment",
+			},
+			want: "MIME-Version: 1.0\r\nSubject: =?UTF-8?B?dGVzdGluZyB0eHQgYm9keSB3aXRoIGF0dGFjaG1lbnQ?=\r\nFrom: gomailer@smtp.com\r\nContent-Type: multipart/mixed; boundary=BOUNDARY\r\nTo: test.usr@smtp.com\r\nCc: test.usr@smtp.com\r\nBcc: test.usr@smtp.com\r\n\r\n--BOUNDARY\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n<p>hello</p>\r\n--BOUNDARY\r\nContent-Type: application/pdf; name=\"f1\"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"f1\"\r\n\r\nYnl0ZSBzdHI\r\n\r\n--BOUNDARY--\r\n",
+		},
+		"should encode message in the expected format when message has an html body and attachments with to,cc, and bcc and additional headers": {
+			input: Message{
+				From:       "gomailer@smtp.com",
+				Recipients: []string{testEmail},
+				Cc:         []string{testEmail},
+				Bcc:        []string{testEmail},
+				Headers:    map[string][]string{"message-id": {"124"}},
+				HTMLBody:   "<p>hello</p>",
+				Attachments: []Attachment{{
+					Filename: "f1",
+					Data:     []byte("byte str"),
+					MIMEType: "application/pdf",
+				}},
+				Subject: "testing txt body with attachment",
+			},
+			want: "MIME-Version: 1.0\r\nSubject: =?UTF-8?B?dGVzdGluZyB0eHQgYm9keSB3aXRoIGF0dGFjaG1lbnQ?=\r\nFrom: gomailer@smtp.com\r\nContent-Type: multipart/mixed; boundary=BOUNDARY\r\nTo: test.usr@smtp.com\r\nCc: test.usr@smtp.com\r\nBcc: test.usr@smtp.com\r\nmessage-id: 124\r\n\r\n--BOUNDARY\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n<p>hello</p>\r\n--BOUNDARY\r\nContent-Type: application/pdf; name=\"f1\"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"f1\"\r\n\r\nYnl0ZSBzdHI\r\n\r\n--BOUNDARY--\r\n",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got := string(encode(tc.input))
+			assert.Equal(t, tc.want, got)
+		})
+	}
 
 }
