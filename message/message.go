@@ -18,7 +18,7 @@ const (
 	// The boundary string is used to separate different parts of a multipart email message.
 	// This is essential for correctly formatting emails with attachments or multiple content types.
 	// For more details, refer to: https://datatracker.ietf.org/doc/html/rfc2046
-	boundary = "my-boundary-12345"
+	boundary = "BOUNDARY"
 
 	// https://datatracker.ietf.org/doc/html/rfc5322
 	crlf      = "\r\n"
