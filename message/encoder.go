@@ -29,15 +29,19 @@ func encode(m Message) []byte {
 	var mailMessage strings.Builder
 	mailSubjectEncoded := "=?UTF-8?B?" + encodeBase64(m.Subject) + "?="
 	hasAttachement := len(m.Attachments) > 0
+	hasBothPlainAndHTML := m.Body != "" && m.HTMLBody != ""
 	mailMessage.WriteString(fmt.Sprintf("MIME-Version: 1.0%s", crlf))
 	mailMessage.WriteString(fmt.Sprintf("Subject: %s%s", mailSubjectEncoded, crlf))
 	mailMessage.WriteString(fmt.Sprintf("From: %s%s", m.From, crlf))
+	// set the main content type
 	if hasAttachement {
-		mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", multiPartContentType, crlf))
+		mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", multiPartMixedContentType, crlf))
+	} else if hasBothPlainAndHTML {
+		mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", multiPartAlternativeContentType, crlf))
 	} else if m.HTMLBody != "" {
 		mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", htmlTypeContentType, crlf))
 	} else {
-		mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", defaultContentType, crlf))
+		mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", plainContentType, crlf))
 	}
 
 	if len(m.Recipients) > 0 {
@@ -54,32 +58,74 @@ func encode(m Message) []byte {
 	for k, v := range m.Headers {
 		mailMessage.WriteString(fmt.Sprintf("%s: %s%s", k, strings.Join(v, ", "), crlf))
 	}
-	// How to guarantee order?
-
 	mailMessage.WriteString(crlf)
 
 	// if Message has attachement
 	if hasAttachement {
 		mailMessage.WriteString(fmt.Sprintf("--%s%s", boundary, crlf))
-		if m.HTMLBody != "" {
+		if hasBothPlainAndHTML {
+			mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", multiPartAlternativeContentType, crlf))
+			mailMessage.WriteString(fmt.Sprintf("--%s%s", altBoundary, crlf))
+			// plain text content.
+			mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", plainContentType, crlf))
+			mailMessage.WriteString(fmt.Sprintf("Content-Transfer-Encoding: 8bit%s", crlf))
+			mailMessage.WriteString(crlf)
+			for _, line := range splitLines(m.Body, maxLineLength) {
+				mailMessage.WriteString(line + crlf)
+			}
+
+			mailMessage.WriteString(crlf)
+
+			// html content.
+			mailMessage.WriteString(fmt.Sprintf("--%s%s", altBoundary, crlf))
 			mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", htmlTypeContentType, crlf))
-		} else {
-			mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", defaultContentType, crlf))
-		}
-		mailMessage.WriteString(fmt.Sprintf("Content-Transfer-Encoding: 8bit%s", crlf))
-		mailMessage.WriteString(crlf)
-		if m.HTMLBody != "" {
+			mailMessage.WriteString(fmt.Sprintf("Content-Transfer-Encoding: 8bit%s", crlf))
+			mailMessage.WriteString(crlf)
+			mailMessage.WriteString(m.HTMLBody + crlf)
+			// closing boundary
+			mailMessage.WriteString(fmt.Sprintf("--%s--%s", altBoundary, crlf))
+
+		} else if m.HTMLBody != "" {
+			mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", htmlTypeContentType, crlf))
+			mailMessage.WriteString(fmt.Sprintf("Content-Transfer-Encoding: 8bit%s", crlf))
+			mailMessage.WriteString(crlf)
 			mailMessage.WriteString(m.HTMLBody)
 		} else {
+			mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", plainContentType, crlf))
+			mailMessage.WriteString(fmt.Sprintf("Content-Transfer-Encoding: 8bit%s", crlf))
+			mailMessage.WriteString(crlf)
 			for _, line := range splitLines(m.Body, maxLineLength) {
 				mailMessage.WriteString(line + crlf)
 			}
 		}
 		mailMessage.WriteString(crlf)
 	} else {
+		if hasBothPlainAndHTML {
+			mailMessage.WriteString(fmt.Sprintf("--%s%s", altBoundary, crlf))
+			// plain text content.
+			mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", plainContentType, crlf))
+			mailMessage.WriteString(fmt.Sprintf("Content-Transfer-Encoding: 8bit%s", crlf))
+			mailMessage.WriteString(crlf)
+			for _, line := range splitLines(m.Body, maxLineLength) {
+				mailMessage.WriteString(line + crlf)
+			}
+
+			mailMessage.WriteString(crlf)
+
+			// html content.
+			mailMessage.WriteString(fmt.Sprintf("--%s%s", altBoundary, crlf))
+			mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", htmlTypeContentType, crlf))
+			mailMessage.WriteString(fmt.Sprintf("Content-Transfer-Encoding: 8bit%s", crlf))
+			mailMessage.WriteString(crlf)
+			mailMessage.WriteString(m.HTMLBody + crlf)
+			// closing boundary
+			mailMessage.WriteString(fmt.Sprintf("--%s--%s", altBoundary, crlf))
+
+		}
 		if m.HTMLBody != "" {
-			mailMessage.WriteString(m.HTMLBody)
+			mailMessage.WriteString(m.HTMLBody + crlf)
 		} else {
+			mailMessage.WriteString(crlf)
 			for _, line := range splitLines(m.Body, maxLineLength) {
 				mailMessage.WriteString(line + crlf)
 			}

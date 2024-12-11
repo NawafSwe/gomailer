@@ -1,8 +1,9 @@
 package message
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -28,11 +29,9 @@ func TestMessage_SplitLines(t *testing.T) {
 		for i, line := range lines {
 			assert.Equal(t, input[i:i+1], line)
 		}
-
 	})
 
 	t.Run("should put input in one line when it is not exceeding the max length", func(t *testing.T) {
-
 		lines := splitLines(input, 20)
 		assert.Equal(t, len(lines), 1)
 		assert.Equal(t, lines[0], input)
@@ -124,5 +123,4 @@ func TestMessage_Encode(t *testing.T) {
 			assert.Equal(t, tc.want, got)
 		})
 	}
-
 }
