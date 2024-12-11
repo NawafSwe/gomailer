@@ -18,10 +18,18 @@ const (
 	// The boundary string is used to separate different parts of a multipart email message.
 	// This is essential for correctly formatting emails with attachments or multiple content types.
 	// For more details, refer to: https://datatracker.ietf.org/doc/html/rfc2046
-	boundary    = "BOUNDARY"
+	boundary = "BOUNDARY"
+
+	// The altBoundary string is used to separate different parts of a multipart email message.
+	// This is essential for correctly formatting emails with attachments or multiple content types.
+	// For more details, refer to: https://datatracker.ietf.org/doc/html/rfc2046
 	altBoundary = "ALT-BOUNDARY"
-	// https://datatracker.ietf.org/doc/html/rfc5322
-	crlf      = "\r\n"
+
+	// The crlf sequence is used to terminate lines in email messages, as specified by RFC 5322.
+	// This ensures proper formatting and compatibility with email clients and servers.
+	// For more details, refer to: https://datatracker.ietf.org/doc/html/rfc5322
+	crlf = "\r\n"
+
 	separator = ", "
 )
 
