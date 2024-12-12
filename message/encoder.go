@@ -70,6 +70,7 @@ func encode(m Message) []byte {
 		mailMessage.WriteString(fmt.Sprintf("--%s--%s", boundary, crlf))
 
 	} else {
+		// else just encode message bodies.
 		mailMessage.WriteString(encodeMessageContent(m))
 	}
 	return []byte(mailMessage.String())

@@ -1,6 +1,7 @@
 package message
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -52,7 +53,19 @@ func TestMessage_Encode(t *testing.T) {
 				HTMLBody:   "<p>hello</p>",
 				Subject:    "testing html body",
 			},
-			want: "MIME-Version: 1.0\r\nSubject: =?UTF-8?B?dGVzdGluZyBodG1sIGJvZHk?=\r\nFrom: gomailer@smtp.com\r\nContent-Type: text/html; charset=UTF-8\r\nTo: test.usr@smtp.com\r\nCc: test.usr@smtp.com\r\nBcc: test.usr@smtp.com\r\n\r\n<p>hello</p>",
+			want: "MIME-Version: 1.0\r\nSubject: =?UTF-8?B?dGVzdGluZyBodG1sIGJvZHk?=\r\nFrom: gomailer@smtp.com\r\nContent-Type: text/html; charset=UTF-8\r\nTo: test.usr@smtp.com\r\nCc: test.usr@smtp.com\r\nBcc: test.usr@smtp.com\r\n\r\n<p>hello</p>\r\n",
+		},
+		"should encode message correctly with both HTML and plain text bodies, including to, cc, and bcc fields": {
+			input: Message{
+				From:       "gomailer@smtp.com",
+				Recipients: []string{testEmail},
+				Cc:         []string{testEmail},
+				Bcc:        []string{testEmail},
+				HTMLBody:   "<p>hello</p>",
+				Body:       "hello",
+				Subject:    "testing html body",
+			},
+			want: "MIME-Version: 1.0\r\nSubject: =?UTF-8?B?dGVzdGluZyBodG1sIGJvZHk?=\r\nFrom: gomailer@smtp.com\r\nContent-Type: multipart/alternative; boundary=ALT-BOUNDARY\r\nTo: test.usr@smtp.com\r\nCc: test.usr@smtp.com\r\nBcc: test.usr@smtp.com\r\n\r\nContent-Type: multipart/alternative; boundary=ALT-BOUNDARY\r\n--ALT-BOUNDARY\r\nContent-Type: text/plain; charset=us-ascii\r\nContent-Transfer-Encoding: 8bit\r\n\r\nhello\r\n\r\n--ALT-BOUNDARY\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n<p>hello</p>\r\n--ALT-BOUNDARY--\r\n",
 		},
 		"should encode message in the expected format when message has an text body only with to,cc, and bcc": {
 			input: Message{
@@ -65,7 +78,7 @@ func TestMessage_Encode(t *testing.T) {
 			},
 			want: "MIME-Version: 1.0\r\nSubject: =?UTF-8?B?dGVzdGluZyB0eHQgYm9keQ?=\r\nFrom: gomailer@smtp.com\r\nContent-Type: text/plain; charset=us-ascii\r\nTo: test.usr@smtp.com\r\nCc: test.usr@smtp.com\r\nBcc: test.usr@smtp.com\r\n\r\nhello\r\n",
 		},
-		"should encode message in the expected format when message has an text body and attachments with to,cc, and bcc": {
+		"should encode message correctly with plain text body and attachments, including to, cc, and bcc fields": {
 			input: Message{
 				From:       "gomailer@smtp.com",
 				Recipients: []string{testEmail},
@@ -80,6 +93,23 @@ func TestMessage_Encode(t *testing.T) {
 				Subject: "testing txt body with attachment",
 			},
 			want: "MIME-Version: 1.0\r\nSubject: =?UTF-8?B?dGVzdGluZyB0eHQgYm9keSB3aXRoIGF0dGFjaG1lbnQ?=\r\nFrom: gomailer@smtp.com\r\nContent-Type: multipart/mixed; boundary=BOUNDARY\r\nTo: test.usr@smtp.com\r\nCc: test.usr@smtp.com\r\nBcc: test.usr@smtp.com\r\n\r\n--BOUNDARY\r\nContent-Type: text/plain; charset=us-ascii\r\nContent-Transfer-Encoding: 8bit\r\n\r\nhello\r\n\r\n--BOUNDARY\r\nContent-Type: application/pdf; name=\"f1\"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"f1\"\r\n\r\nYnl0ZSBzdHI\r\n\r\n--BOUNDARY--\r\n",
+		},
+		"should encode message correctly with plain text and HTML bodies, including attachments, to, cc, and bcc fields": {
+			input: Message{
+				From:       "gomailer@smtp.com",
+				Recipients: []string{testEmail},
+				Cc:         []string{testEmail},
+				Bcc:        []string{testEmail},
+				Body:       "hello",
+				HTMLBody:   "<p>hello</p>",
+				Attachments: []Attachment{{
+					Filename: "f1",
+					Data:     []byte("byte str"),
+					MIMEType: "application/pdf",
+				}},
+				Subject: "testing txt body with attachment",
+			},
+			want: "MIME-Version: 1.0\r\nSubject: =?UTF-8?B?dGVzdGluZyB0eHQgYm9keSB3aXRoIGF0dGFjaG1lbnQ?=\r\nFrom: gomailer@smtp.com\r\nContent-Type: multipart/mixed; boundary=BOUNDARY\r\nTo: test.usr@smtp.com\r\nCc: test.usr@smtp.com\r\nBcc: test.usr@smtp.com\r\n\r\n--BOUNDARY\r\nContent-Type: multipart/alternative; boundary=ALT-BOUNDARY\r\n--ALT-BOUNDARY\r\nContent-Type: text/plain; charset=us-ascii\r\nContent-Transfer-Encoding: 8bit\r\n\r\nhello\r\n\r\n--ALT-BOUNDARY\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n<p>hello</p>\r\n--ALT-BOUNDARY--\r\n\r\n--BOUNDARY\r\nContent-Type: application/pdf; name=\"f1\"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"f1\"\r\n\r\nYnl0ZSBzdHI\r\n\r\n--BOUNDARY--\r\n",
 		},
 		"should encode message in the expected format when message has an html body and attachments with to,cc, and bcc": {
 			input: Message{
@@ -120,6 +150,7 @@ func TestMessage_Encode(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			got := string(encode(tc.input))
+			fmt.Println(got)
 			assert.Equal(t, tc.want, got)
 		})
 	}

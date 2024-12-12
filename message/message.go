@@ -76,12 +76,12 @@ func (m Message) validate() error {
 		return fmt.Errorf("invalid from address: %w", err)
 	}
 	if len(m.Recipients) == 0 {
-		return fmt.Errorf("to cannot be empty")
+		return fmt.Errorf("recipients cannot be empty slice")
 	}
 
 	for _, r := range m.Recipients {
 		if _, err := mail.ParseAddress(r); err != nil {
-			return fmt.Errorf("invalid recipient email: %w", err)
+			return fmt.Errorf("given %s is invalid recipient email: %w", r, err)
 		}
 	}
 	return nil
