@@ -31,7 +31,10 @@ func encode(m Message) []byte {
 	mailMessage.WriteString(fmt.Sprintf("MIME-Version: 1.0%s", crlf))
 	mailMessage.WriteString(fmt.Sprintf("Subject: %s%s", mailSubjectEncoded, crlf))
 	mailMessage.WriteString(fmt.Sprintf("From: %s%s", m.From, crlf))
-	// set the main content type
+
+	// If the email has attachments, set the original content type to multipart/mixed.
+	// This allows for nesting of different content types (plain text, HTML, or both) within the email.
+	// For more details on multipart/mixed, refer to: https://datatracker.ietf.org/doc/html/rfc2046#section-5.1.3
 	if hasAttachement {
 		mailMessage.WriteString(fmt.Sprintf("Content-Type: %s%s", multiPartMixedContentType, crlf))
 	} else if hasBothPlainAndHTML {

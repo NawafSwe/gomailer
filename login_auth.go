@@ -3,11 +3,12 @@ package gomailer
 import (
 	"fmt"
 	"net/smtp"
+	"strings"
 )
 
 const (
-	loginAuthUsername = "Username:"
-	loginAuthPassword = "Password:"
+	loginAuthUsername = "username:"
+	loginAuthPassword = "password:"
 )
 
 // loginAuth implements the smtp.Auth interface for LOGIN authentication mechanism.
@@ -22,7 +23,7 @@ func (a *loginAuth) Start(_ *smtp.ServerInfo) (string, []byte, error) {
 
 func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	if more {
-		switch string(fromServer) {
+		switch strings.TrimSpace(strings.ToLower(string(fromServer))) {
 		case loginAuthUsername:
 			return []byte(a.username), nil
 		case loginAuthPassword:

@@ -2,12 +2,12 @@ package message
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMessage(t *testing.T) {
-
 	tests := map[string]struct {
 		getMessage  func() Message
 		expectedErr error
@@ -59,7 +59,6 @@ func TestMessage(t *testing.T) {
 				_, err := tc.getMessage().Encode()
 				assert.Equal(t, tc.expectedErr, err)
 			}
-
 		})
 	}
 }
