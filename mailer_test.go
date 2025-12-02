@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	mailerMock "github.com/NawafSwe/gomailer/internal/mock"
-	"github.com/NawafSwe/gomailer/message"
 	"github.com/golang/mock/gomock"
+	mailerMock "github.com/nawafswe/gomailer/internal/mock"
+	"github.com/nawafswe/gomailer/message"
 	"github.com/stretchr/testify/assert"
 )
 

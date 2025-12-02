@@ -12,7 +12,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	message "github.com/NawafSwe/gomailer/message"
+	message "github.com/nawafswe/gomailer/message"
 	gomock "github.com/golang/mock/gomock"
 )
 

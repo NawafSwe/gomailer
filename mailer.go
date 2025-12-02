@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NawafSwe/gomailer/message"
+	"github.com/nawafswe/gomailer/message"
 )
 
 const (
