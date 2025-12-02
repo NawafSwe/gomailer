@@ -11,7 +11,7 @@ This Go Mailer Library provides a convenient way to send emails with support for
 
 To install the library, run:
 ```shell
-go get github.com/NawafSwe/gomailer
+go get github.com/nawafswe/gomailer
 ```
 
 # Usage
@@ -24,7 +24,7 @@ import (
     "crypto/tls"
     "time"
 	
-    "github.com/NawafSwe/gomailer"
+    "github.com/nawafswe/gomailer"
 )
 
 func main() {
@@ -67,8 +67,8 @@ package main
 import (
     "log"
 	
-    "github.com/NawafSwe/gomailer"
-    "github.com/NawafSwe/gomailer/message"
+    "github.com/nawafswe/gomailer"
+    "github.com/nawafswe/gomailer/message"
 )
 
 func main() {
@@ -118,8 +118,8 @@ package main
 
 import (
     "log"
-    "github.com/NawafSwe/gomailer"
-    "github.com/NawafSwe/gomailer/message"
+    "github.com/nawafswe/gomailer"
+    "github.com/nawafswe/gomailer/message"
 )
 
 func main() {
